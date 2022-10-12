@@ -1,0 +1,83 @@
+<html>
+<head> 
+  <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script> 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js" integrity="sha512-bZS47S7sPOxkjU/4Bt0zrhEtWx0y0CRkhEp8IckzK+ltifIIE9EMIMTuT/mEzoIMewUINruDBIR/jJnbguonqQ==" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id='root'></div>
+  <script type='text/babel'> 
+    const { useState, useEffect } = React;
+    const SignIn = ({ signIn })=> {
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const onSubmit = async (ev) => {
+         ev.preventDefault();
+          try {
+            await signIn({ username, password }); 
+          }
+          catch(ex){
+            setError(ex.response.data.error);
+         }
+      }
+    return ( 
+   <form onSubmit={ onSubmit }> 
+    { error }
+     <input placeholder='username' value={ username } onChange={ ev => setUsername(ev.target.value) } name='username'/>
+     <input placeholder='password' value={ password } onChange={ ev => setPassword(ev.target.value) } name='password'/> 
+     <button>Sign In</button> 
+     <ul>
+       <li>moe has a password of moe_pw</li>
+       <li>lucy has a password of lucy_pw</li>
+       <li>larry has a password of larry_pw</li>
+     </ul>
+   </form>
+  );
+} 
+
+const App = ()=> {
+  const [auth, setAuth] = useState({});
+  const logout = () => { 
+    window.localStorage.removeItem('token');
+    setAuth({});
+  }
+
+  const attemptTokenLogin = async()=> {
+    const token = window.localStorage.getItem('token');
+
+    if(token){
+      const response = await axios.get('/api/auth', { 
+        headers: { authorization: token }
+      });
+      setAuth(response.data);
+    }
+  }
+
+  useEffect(()=> attemptTokenLogin(), []);
+
+  const signIn = async(credentials)=> { 
+    const response = await axios.post('/api/auth', credentials);
+    const { token } = response.data;
+    window.localStorage.setItem('token', token);
+    attemptTokenLogin(); 
+  }
+
+  if(!auth.id){
+    return <SignIn signIn={ signIn }/>
+  }
+  else { 
+    return ( 
+      <div> Welcome { auth.username } 
+        <button onClick={ logout }>Logout</button>
+      </div>
+    ); 
+  }
+} 
+
+
+ReactDOM.render(<App />, document.querySelector('#root'));
+  </script>
+</body>
+</html>
