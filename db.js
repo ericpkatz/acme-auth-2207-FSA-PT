@@ -2,6 +2,7 @@ const Sequelize = require('sequelize');
 const { STRING } = Sequelize;
 const config = { logging: false }; 
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 if(process.env.LOGGING){ delete config.logging; } 
 
@@ -13,6 +14,12 @@ const User = conn.define('user',
     password: STRING
   }
 ); 
+
+User.addHook('beforeSave', async(user)=> {
+  if(user.changed('password')){
+    user.password = await bcrypt.hash(user.password, 5);
+  }
+});
 
 User.byToken = async(token)=> { 
   try { 
@@ -33,10 +40,10 @@ User.byToken = async(token)=> {
 
 User.authenticate = async({ username, password })=> { 
   const user = await User.findOne({ 
-    where: { username, password } 
+    where: { username } 
   }); 
 
-  if(user){ 
+  if(user && await bcrypt.compare(password, user.password)){ 
     return jwt.sign({ id: user.id}, process.env.JWT); 
   }
 
